@@ -1,0 +1,322 @@
+4.1 source code 
+<?php
+session_start();
+require 'file/connection.php';
+if(isset($_GET['search'])){
+$searchKey = $_GET['search'];
+$sql = "select resourceinfo.*, hospitals_db.* from resourceinfo, hospitals_db where
+resourceinfo.hid=hospitals_db.id && bg LIKE '%$searchKey%'";
+}else{
+$sql = "select resourceinfo.*, hospitals_db.* from resourceinfo, hospitals_db where
+resourceinfo.hid=hospitals_db.id";
+}
+$result = mysqli_query($conn, $sql);
+?>
+<!DOCTYPE html>
+<html>
+<?php $title="Corona Resource Inventory | Available Resources"; ?>
+<?php require 'head.php'; ?>
+<body>
+<?php require 'header.php'; ?>
+<div class="container cont">
+<?php require 'message.php'; ?>
+<div class="row col-lg-8 col-md-8 col-sm-12 mb-3">
+<form method="get" action="" style="margin-top:-20px; ">
+<label class="font-weight-bolder">Search For Resource:</label>
+<select name="search" class="form-control">
+<option><?php echo @$_GET['search']; ?></option>
+<option value="Remdesivir">Remdesivir</option>
+<option value="Oxygen Cylinders">Oxygen Cylinders</option>
+<option value="Beds">Beds</option>
+<option value="Ventilators">Ventilators</option>
+<option value="Plasma (Contact for Blood Group)">Plasma (Contact for Blood Group)</option>
+</select><br>
+<a href="AvailableResources.php" class="btn btn-info mr-4"> Reset</a>
+<input type="submit" name="submit" class="btn btn-info" value="search">
+</form>
+</div>
+<table class="table table-responsive table-striped rounded mb-5">
+<tr><th colspan="7" class="title">Available Resources</th></tr>
+<tr>
+<th>#</th>
+<th>Hospital Name</th>
+<th>Hospital City</th>
+<th>Hospital Email</th>
+<th>Hospital Phone</th>
+<th>Resource Available</th>
+<th>Action</th>
+</tr>
+<div>
+<?php
+if ($result) {
+$row =mysqli_num_rows( $result);
+if ($row) { //echo "<b> Total ".$row." </b>";
+}else echo '<b style="color:white;background-color:red;padding:7px;border-radius: 15px
+50px;">Nothing to show.</b>';
+}
+?>
+</div>
+<?php while($row = mysqli_fetch_array($result)) { ?>
+<tr>
+<td><?php echo ++$counter;?></td>
+<td><?php echo $row['hname'];?></td>
+<td><?php echo ($row['hcity']); ?></td>
+<td><?php echo ($row['hemail']); ?></td>
+<td><?php echo ($row['hphone']); ?></td>
+<td><?php echo ($row['bg']); ?></td>
+<?php $bid= $row['bid'];?>
+<?php $hid= $row['hid'];?>
+<?php $bg= $row['bg'];?>
+<form action="file/request.php" method="post">
+<input type="hidden" name="bid" value="<?php echo $bid; ?>">
+<input type="hidden" name="hid" value="<?php echo $hid; ?>">
+<input type="hidden" name="bg" value="<?php echo $bg; ?>">
+<?php if (isset($_SESSION['hid'])) { ?>
+<td><a href="javascript:void(0);" class="btn btn-info hospital">Request Resource</a></td>
+<?php } else {(isset($_SESSION['rid'])) ?>
+<td><input type="submit" name="request" class="btn btn-info" value="Request Resource"></td>
+<?php } ?>
+</form>
+</tr>
+<?php } ?>
+</table>
+</div>
+<?php require 'footer.php' ?>
+</body>
+ <script type="text/javascript">
+$('.hospital').on('click', function(){
+alert("Hospital user can't request for Resource.Contact respective hospital if emergency")
+});
+</script>
+
+4.2 Code for Resource Request:
+<?php
+require 'file/connection.php';
+session_start();
+if(!isset($_SESSION['hid']))
+{
+header('location:login.php');
+}
+else {
+$hid = $_SESSION['hid'];
+$sql = "select resourcerequest.*, public_db.* from resourcerequest, public_db where hid='$hid' &&
+resourcerequest.rid=public_db.id";
+$result = mysqli_query($conn, $sql);
+?>
+<!DOCTYPE html>
+<html>
+<?php $title="Corona Resources Inventory | Resource Requests"; ?>
+<?php require 'head.php'; ?>
+<body>
+<?php require 'header.php'; ?>
+<div class="container cont">
+<?php require 'message.php'; ?>
+<table class="table table-responsive table-striped rounded mb-5">
+<tr><th colspan="9" class="title">Resource requests</th></tr>
+<tr>
+<th>#</th>
+<th>Name</th>
+<th>Email</th>
+<th>City</th>
+<th>Phone</th>
+<th>Resource Requested</th>
+<th>Status</th>
+<th colspan="2">Action</th>
+</tr>
+<div>
+<?php
+if ($result) {
+$row =mysqli_num_rows( $result);
+if ($row) { //echo "<b> Total ".$row." </b>";
+}else echo '<b style="color:white;background-color:red;padding:7px;border-radius: 15px 50px;">No
+one has requested yet. </b>';
+}
+?>
+</div>
+<?php while($row = mysqli_fetch_array($result)) { ?>
+<tr>
+<td><?php echo ++$counter;?></td>
+<td><?php echo $row['rname'];?></td>
+<td><?php echo $row['remail'];?></td>
+<td><?php echo $row['rcity'];?></td>
+<td><?php echo $row['rphone'];?></td>
+<td><?php echo $row['bg'];?></td>
+<td><?php echo 'You have '.$row['status'];?></td>
+<td><?php if($row['status'] == 'Accepted'){ ?><a href="" class="btn btn-success
+disabled">Accepted</a><?php }
+else{ ?>
+<a href="file/accept.php?reqid=<?php echo $row['reqid'];?>" class="btn btn- success">Accept</a>
+<?php } ?>
+</td>
+<td><?php if($row['status'] == 'Rejected'){ ?><a href="" class="btn btn-danger
+disabled">Rejected</a><?php }
+else{ ?>
+<a href="file/reject.php?reqid=<?php echo $row['reqid'];?>" class="btn btn-danger">Reject</a>
+<?php } ?>
+</td>
+</tr>
+<?php } ?>
+</table>
+</div>
+<?php require 'footer.php'; ?>
+</body>
+</html>
+<?php } ?>
+
+
+4.3 Code for Sent Request:
+<?php
+require 'file/connection.php';
+session_start();
+if(!isset($_SESSION['rid']))
+{
+header('location:login.php');
+}
+else {
+$rid = $_SESSION['rid'];
+$sql = "select resourcerequest.*, hospitals_db.* from resourcerequest, hospitals_db where rid='$rid' &&
+resourcerequest.hid=hospitals_db.id";
+$result = mysqli_query($conn, $sql);
+?>
+<!DOCTYPE html>
+<html>
+<?php $title="Corona Resource Inventory | Sent Requests"; ?>
+<?php require 'head.php'; ?>
+<body>
+<?php require 'header.php'; ?>
+<div class="container cont">
+<?php require 'message.php'; ?>
+<table class="table table-responsive table-striped rounded mb-5">
+<tr><th colspan="8" class="title">Sent requests</th></tr>
+<tr>
+<th>#</th>
+<th>Name</th>
+<th>Email</th>
+<th>City</th>
+<th>Phone</th>
+<th>Resource Requested</th>
+<th>Status</th>
+<th>Action</th>
+</tr>
+<div>
+<?php
+if ($result) {
+$row =mysqli_num_rows( $result);
+if ($row) { //echo "<b> Total ".$row." </b>";
+}else echo '<b style="color:white;background-color:red;padding:7px;border-radius: 15px 50px;">You
+have not requested yet. </b>';
+}
+?>
+</div>
+<?php while($row = mysqli_fetch_array($result)) { ?>
+<tr>
+<td><?php echo ++$counter;?></td>
+<td><?php echo $row['hname'];?></td>
+<td><?php echo $row['hemail'];?></td>
+<td><?php echo $row['hcity'];?></td>
+<td><?php echo $row['hphone'];?></td>
+<td><?php echo $row['bg'];?></td>
+<td><?php echo $row['status'];?></td>
+<td><?php if($row['status'] == 'Accepted'){ ?>
+<?php }
+else{ ?>
+<a href="file/cancel.php?reqid=<?php echo $row['reqid'];?>" class="btn btn-danger">Cancel</a>
+<?php } ?>
+</td>
+</tr>
+<?php } ?>
+</table>
+</div>
+<?php require 'footer.php'; ?>
+</body>
+</html>
+<?php } ?>
+
+
+4.4 Code for Resources Info:
+<?php
+require 'file/connection.php';
+session_start();
+if(!isset($_SESSION['hid']))
+{
+header('location:login.php');
+}
+else {
+?>
+<!DOCTYPE html>
+<html>
+<?php $title="Corona Resources Inventory | Add Available Resources"; ?>
+<?php require 'head.php'; ?>
+<body>
+<?php require 'header.php'; ?>
+
+<div class="container cont">
+
+<?php require 'message.php'; ?>
+<div class="row justify-content-center">
+<div class="col-lg-4 col-md-5 col-sm-6 col-xs-7 mb-5">
+<div class="card">
+<div class="card-header title">Add Resources available in your hospital</div>
+<div class="card-body">
+<form action="file/infoAdd.php" method="post">
+<a data-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" ariacontrols="collapseExample" title="click to see">Term & conditions. </a><br>
+<div class="collapse" id="collapseExample">
+Terms And Conditions!
+</div>
+<input type="checkbox" name="condition" value="agree" required> Agree<br><br>
+<select class="form-control" name="bg" required="">
+<option disabled selected>Resources</option>
+<option value="Remdesivir">Remdesivir</option>
+<option value="Oxygen Cylinders">Oxygen Cylinders</option>
+<option value="Beds">Beds</option>
+<option value="Ventilators">Ventilators</option>
+<option value="Plasma (Contact for Blood Group)">Plasma (Contact for Blood Group)</option>
+</select><br>
+<input type="submit" name="add" value="Add" class="btn btn-primary btn-block"><br>
+<a href="index.php" class="float-right" title="click here">Cancel</a>
+</form>
+</div>
+</div>
+</div>
+
+<?php if(isset($_SESSION['hid'])){
+$hid=$_SESSION['hid'];
+$sql = "select * from resourceinfo where hid='$hid'";
+$result = mysqli_query($conn, $sql);
+}
+?>
+<div class="col-lg-4 col-md-5 col-sm-6 col-xs-7 mb-5">
+<table class="table table-striped table-responsive">
+<th colspan="4" class="title">Resources Available</th>
+<tr>
+<th>S.No</th>
+
+<th>Resources</th>
+<th>Action</th>
+</tr>
+<div>
+<?php
+if ($result) {
+$row =mysqli_num_rows( $result);
+if ($row) { //echo "<b> Total ".$row." </b>";
+}else echo '<b style="color:white;background-color:red;padding:7px;border-radius: 15px
+50px;">Nothing to show.</b>';
+}
+?>
+</div>
+<?php while($row = mysqli_fetch_array($result)) { ?>
+<tr>
+<td><?php echo ++$counter; ?></td>
+
+<td><?php echo $row['bg'];?></td>
+<td><a href="file/delete.php?bid=<?php echo $row['bid'];?>" class="btn btn-danger">Delete</a></td>
+</tr>
+<?php } ?>
+</table>
+</div>
+
+</div>
+</div>
+<?php require 'footer.php' ?>
+</body>
+<?php } ?>
